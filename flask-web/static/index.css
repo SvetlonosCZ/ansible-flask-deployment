@@ -1,0 +1,73 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.ramecek {
+    width: 75%;
+    border: 5px solid rgb(78, 60, 14);
+    box-sizing: border-box;
+    margin: 5px auto;
+    padding: 5px 8px;
+    background-color: rgba(240, 255, 255, 0.35);
+    border-radius: 8px;
+}
+
+.images {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    border-radius: 50%;
+    flex-wrap: wrap; /* ← dovolí zalomení při zúžení */
+}
+
+.akocka {
+    display: flex;
+    border-radius: 50%;
+}
+
+.akocka:hover {
+    transform: scale(1.05);
+    box-shadow: 25px 25px 10px rgba(255, 255, 255, 0.6);
+}
+
+.imgkocka {
+    width: 300px;
+    height: 300px;
+    box-sizing: border-box;
+    object-fit: contain;
+    border-radius: 50%;
+    box-shadow: 12px 12px 10px rgb(55, 0, 10);
+
+}
+
+.kontakt {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+.button {
+    padding: 10px 20px;
+    font-size: 35px;
+    background-color: rgb(236, 222, 77);
+    color: black;
+    border-radius: 15px;
+}
+
+.button:hover {
+    transform: scale(1.05);
+    background-color: rgba(242, 234, 148, 0.886) ;
+}
+
+.pr_pismeno {
+    color: red;
+}
+
+.youtube_video {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}

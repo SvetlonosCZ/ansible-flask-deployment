@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn instance for Flask web
+After=network.target
+
+[Service]
+User={{ webapp_user }}
+Group={{ webapp_user }}
+WorkingDirectory={{ site_root_dir }}/flask-web
+# --- UPRAVENO: Absolutní cesta k binárce gunicorn z .venv pro spolehlivost ---
+ExecStart={{ site_root_dir }}/flask-web/.venv/bin/gunicorn -w 3 -b unix:/tmp/gunicorn_flask_app.sock 'app:app' 
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

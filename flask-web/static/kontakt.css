@@ -1,0 +1,72 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Globální styly pro formulář */
+.contact-form {
+    display: flex;
+    flex-direction: column; /* Hlavní uspořádání: Všechny sekce pod sebou */
+    gap: 20px; /* Mezera mezi jednotlivými sekcemi (řádky polí, select, textarea) */
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: rgba(247, 230, 176, 0.17); /* Stejné jako kontejner */
+    border-radius: 8px;
+}
+
+/* Skupina 1: Dva řádky po dvou polích (Jméno/Příjmení a Datum/Email) */
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+/* Kontejner pro jednotlivá pole */
+.form-group {
+    display: flex;
+    flex-direction: column; /* Popisek nad polem */
+    flex: 1; /* Políčka se roztáhnou, aby vyplnila form-row */
+    min-width: 0;
+    margin: 5px 0;
+}
+
+/* Stylování Input, Select, Textarea */
+input:not([type="radio"]), select, textarea {
+    border: 3px solid rgb(78, 60, 14);
+    padding: 8px;
+    width: 100%; /* Vyplní celý form-group */
+    box-sizing: border-box;
+}
+
+/* Speciální styly pro radio group */
+.radio-group {
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 15px; /* Mezera mezi Muž/Žena */
+    align-items: center;
+}
+.radio-group legend {
+    font-weight: bold; /* Zvýraznění titulku Fieldsetu */
+    padding-right: 10px;
+}
+
+/* Styly pro Tlačítko (zde můžete použít vaši třídu .button, pokud chcete) */
+.submit-section {
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 600px) {
+    
+    /* Přepne dvousloupcové řádky (Jméno/Příjmení, Stát/Pohlaví) na sloupce */
+    .form-row {
+        flex-direction: column;
+        gap: 15px; /* Přidá vertikální mezeru mezi pole (Jméno a Příjmení) */
+    }
+    .radio-group {
+        flex-wrap: wrap;
+    }
+}

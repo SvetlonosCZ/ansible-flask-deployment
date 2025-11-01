@@ -1,0 +1,11 @@
+---
+# playbooks/site.yml
+- name: Hlavni konfigurace serveru a nasazeni
+  hosts: all
+  become: yes
+  vars_files:
+    - ../group_vars/all.yml
+
+  roles:
+    - system
+    - webserver

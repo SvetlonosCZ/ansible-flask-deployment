@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    server_name {{ ansible_fqdn }};
+
+    location /static {
+        # Zde NGINX servíruje statiku přímo
+        alias {{ site_root_dir }}/flask-web/static;
+    }
+
+    location / {
+        # --- ZMĚNA: Používáme explicitní hlavičky, protože 'proxy_params' nemusí existovat ---
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # TOTO JE KRITICKÉ: Cesta musí odpovídat systemd.service.j2
+        proxy_pass http://unix:/tmp/gunicorn_flask_app.sock:; 
+    }
+}

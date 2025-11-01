@@ -1,0 +1,129 @@
+# =================================================================
+# NGINX WEBSERVER / FLASK DEPLOYMENT TASKS
+# =================================================================
+
+- name: 1. Instalace NGINX
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: 2. Vytvoreni root adresare pro web
+  ansible.builtin.file:
+    path: "{{ site_root_dir }}"
+    state: directory
+    owner: "{{ webapp_user }}"
+    group: "{{ webapp_user }}"
+    mode: '0755'
+
+- name: 3. Zkopírování celé Flask aplikace na cílový server
+  ansible.builtin.copy:
+    src: /vagrant/flask-web/
+    dest: "{{ site_root_dir }}/flask-web/"
+    owner: "{{ webapp_user }}"
+    group: "{{ webapp_user }}"
+    mode: '0755'
+
+# --- NGINX KONFIGURACE PRO FLASK REVERZNÍ PROXY ---
+
+- name: 4. Odstranění defaultní konfigurace NGINX
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart NGINX
+
+- name: '5. Zkopírování konfigurace NGINX pro Flask web (soubor: mujweb)'
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/mujweb
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart NGINX
+
+- name: 6. Aktivace konfigurace vytvořením symlinku (mujweb)
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/mujweb
+    dest: /etc/nginx/sites-enabled/mujweb
+    state: link
+  notify: Restart NGINX
+
+# =================================================================
+# FLASK APLIKACE A SYSTEMD
+# =================================================================
+
+- name: 7. Instalace balíčků pro Python a WSGI (Gunicorn)
+  ansible.builtin.apt:
+    name: ['python3-pip', 'python3-venv', 'gunicorn']
+    state: present
+    update_cache: yes
+
+- name: 8. Vytvoření virtuálního prostředí pro Flask web
+  ansible.builtin.command:
+    cmd: python3 -m venv "{{ site_root_dir }}/flask-web/.venv"
+    creates: "{{ site_root_dir }}/flask-web/.venv/bin/activate"
+
+- name: 9. Instalace závislostí z requirements.txt
+  ansible.builtin.pip:
+    requirements: "{{ site_root_dir }}/flask-web/requirements.txt"
+    virtualenv: "{{ site_root_dir }}/flask-web/.venv"
+
+- name: 10. Zkopírování šablony systemd služby pro Gunicorn
+  ansible.builtin.template:
+    src: systemd.service.j2
+    dest: /etc/systemd/system/flask_app.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart a povolení systemd služby
+
+- name: 10a. Reload systemd démona pro načtení nové služby
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: 10b. Zajištění vlastnictví a práv pro uživatele aplikace
+  ansible.builtin.file:
+    path: "{{ site_root_dir }}/flask-web"
+    state: directory
+    owner: "{{ webapp_user }}"
+    group: "{{ webapp_user }}"
+    recurse: yes
+    mode: '0755'
+
+- name: 10c. Vytvoření prázdného JSON souboru s právy pro zápis
+  ansible.builtin.file:
+    path: "{{ site_root_dir }}/flask-web/zpravy.json"
+    state: touch # Vytvoří prázdný soubor, pokud neexistuje
+    owner: "{{ webapp_user }}"
+    group: "{{ webapp_user }}"
+    mode: '0664'
+
+- name: 11. Zajištění spuštění Flask aplikace
+  ansible.builtin.systemd:
+    name: flask_app.service
+    state: started
+    enabled: yes
+
+- name: 12. Zapnuti a spusteni NGINX
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+
+# =================================================================
+# ZKOUŠKA FUNKČNOSTI (Upravená pro dynamický web)
+# =================================================================
+
+- name: 13. Validace HTTP dostupnosti
+  ansible.builtin.uri:
+    url: http://localhost:{{ http_port }}/kontakt
+    status_code: 200
+    return_content: yes
+  register: http_check
+
+- name: 14. Overeni obsahu stranky (assertion)
+  ansible.builtin.assert:
+    that:
+      - "'Kontakt' in http_check.content"
+      - "'Odeslat zprávu' in http_check.content"
+    fail_msg: "Chyba validace: Web je dostupny, ale nenasel jsem text 'Kontakt' nebo tlacitko 'Odeslat zprávu'!"
+    success_msg: "Validace OK: Flask web je dostupny, odpovida a obsahuje spravny obsah."

@@ -1,0 +1,12 @@
+---
+- name: Restart NGINX
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+
+- name: Restart a povolení systemd služby
+  ansible.builtin.systemd:
+    name: flask_app.service
+    daemon_reload: yes  # Zajistí, že se systém načte novou systemd konfiguraci
+    state: restarted
+    enabled: yes

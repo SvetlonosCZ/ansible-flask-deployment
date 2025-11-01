@@ -1,0 +1,11 @@
+---
+webapp_user: webappi
+webapp_group: webappi
+site_root_dir: /opt/static-sites
+site_title: "Practical Test - NGINX Deployment by {{ webapp_user }}"
+site_content: "Tato stranka byla nasazena pomoci Ansible a bezi pod uzivatelem {{ webapp_user }}."
+ssh_port: 22
+http_port: 80
+
+# === CITLIVE HODNOTY Z VAULTU ===
+webapp_password: "{{ vault_webapp_password | default('changeme') }}"

@@ -1,0 +1,63 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Konfigurace Vagrant API verze
+Vagrant.configure("2") do |config|
+
+  # --- Nastavení VM ---
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "ansible-target"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "Ansible-Flask-Target"
+    vb.memory = "1024"
+    vb.cpus = "1"
+  end
+  
+  # --- Síťování ---
+  # Forward port 80 (NGINX)
+  # Poznámka: Port 80 na hostiteli (Windows) může vyžadovat oprávnění správce při spuštění.
+  config.vm.network "forwarded_port", guest: 80, host: 80 
+  # Privátní síť
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # --- Provisioning ---
+
+  # KROK 1: Instalace Passlib
+  # Nutné pro Ansible filtr password_hash() na cílové VM (guest)
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update -qq
+    apt-get install -y python3-pip
+    pip3 install passlib
+  SHELL
+
+  # KROK 2: Kopie Vault hesla na bezpečné místo
+  # OPRAVA: Kopírujeme do /tmp, ale MĚNÍME VLASTNÍKA NA vagrant a dáváme mu práva 400.
+  config.vm.provision "shell", inline: <<-SHELL
+    cp /vagrant/ansible-project/.vault_pass /tmp/.vault_pass_safe
+    chown vagrant:vagrant /tmp/.vault_pass_safe # Toto je klíčové - měníme vlastníka na uživatele 'vagrant'
+    chmod 400 /tmp/.vault_pass_safe
+  SHELL
+
+  # KROK 3: Ansible Provisioning
+  # Používáme 'ansible_local', protože Ansible běží uvnitř VM (ne na Windows hostiteli)
+  config.vm.provision "ansible_local" do |ansible|
+    
+    # Cesty jsou nyní relativní z kořene projektu (kde je tento Vagrantfile)
+    ansible.playbook = "ansible-project/playbooks/site.yml"
+    ansible.inventory_path = "ansible-project/inventory/hosts.yml"
+    
+    # Instalace Ansible uvnitř VM
+    ansible.install_mode = "default" 
+    ansible.become = true 
+
+    # Cesta k souboru s heslem pro Vault, bezpečná cesta v /tmp)
+    ansible.vault_password_file = "/tmp/.vault_pass_safe" 
+
+    # OPRAVA PRO CESTU K ROLÍM: Vagrant použije tento konfigurační soubor, který explicitně definuje roles_path.
+    ansible.config_file = "ansible-project/ansible.cfg"
+
+    # Opravený komentář:
+    # Vagrant použije .vault_pass k automatickému odemčení 'group_vars/vault.yml'
+  end
+end

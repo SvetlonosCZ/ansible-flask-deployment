@@ -1,0 +1,82 @@
+---
+
+- name: 1. Aktualizace balicku a cache
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+    cache_valid_time: 3600 # Cache jen po dobu 1 hodiny
+
+- name: 2. Vytvoreni dedikovaneho uzivatele 'webappi'
+  ansible.builtin.user:
+    name: "{{ webapp_user }}"
+    state: present
+    shell: /bin/bash
+    password: "{{ webapp_password | password_hash('sha512') }}"
+    comment: "Dedikovaný uživatel pro webovou aplikaci"
+
+
+- name: 3. Instalace UFW, Fail2ban a Unattended-Upgrades
+  ansible.builtin.apt:
+    name:
+      - ufw
+      - fail2ban
+      - unattended-upgrades
+    state: present
+
+- name: 4. Nastavit vychozi politiku UFW (deny incoming)
+  community.general.ufw:
+    direction: incoming
+    default: deny
+
+- name: 5. Povolit SSH (port 22)
+  community.general.ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+
+- name: 6. Povolit HTTP (port 80)
+  community.general.ufw:
+    rule: allow
+    port: "{{ http_port }}"
+
+- name: 7. Zapnout UFW
+  community.general.ufw:
+    state: enabled
+
+- name: 8. Zakazat prihlaseni pro root uzivatele
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin no"
+    state: present
+  notify: restart sshd # Restart SSH služby, ale JEN když se soubor ZMĚNÍ.
+
+- name: 9. Povolit prihlaseni pouze pres SSH klic (Zakazat hesla)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    state: present
+  notify: restart sshd
+
+- name: 10. Kopirovani autorizovaneho klice z uzivatele 'vagrant' pro '{{ webapp_user }}'
+  ansible.builtin.authorized_key:
+    user: "{{ webapp_user }}"
+    state: present
+    # Zkopiruje klice, ktere ma Vagrant pro uzivatele 'vagrant' do naseho noveho uzivatele.
+    key: "{{ lookup('file', '/home/vagrant/.ssh/authorized_keys') }}"
+    manage_dir: yes # Zkontroluje, ze .ssh adresar existuje a ma spravna prava
+    exclusive: yes
+
+- name: 11. Povolit automaticke bezpecnostni aktualizace (unattended-upgrades)
+  ansible.builtin.copy:
+    content: | # YAML multiline string - vlozime konfiguracni soubor
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: '0644'
+
+- name: 12. Spustit a povolit Fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: yes

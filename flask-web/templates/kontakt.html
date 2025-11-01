@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styly.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kontakt.css') }}">
+    <title>Kontakty</title>
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#">Odklik</a></li>
+                <li><a href="#">Odklik</a></li>
+                <li><a href="#">Odklik</a></li>
+                <li><a href="#">Odklik</a></li>
+            </ul>
+        </nav>
+        <div class="MDlogo">
+            <img src="{{ url_for('static', filename='images/MDlogo.jpg') }}" alt="Mrtvola Design">
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <h3>Napiště nám co zlepšit</h3>
+            <br>
+            
+            {% if success_message %}
+                <div style="padding: 15px; margin-bottom: 20px; border: 1px solid #4CAF50; background-color: #e6ffe6; color: #4CAF50; border-radius: 5px;">
+                    Děkujeme! Vaše zpráva byla úspěšně odeslána.
+                </div>
+            {% endif %}
+
+            {% if error_message %}
+                <div style="padding: 15px; margin-bottom: 20px; border: 1px solid #cc0000; background-color: #ffe6e6; color: #cc0000; border-radius: 5px;">
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+
+            <form action="{{ url_for('kontakt') }}" method="POST" class="contact-form">
+                <h4>Formulář:</h4>
+                <div class="form-row-group">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="jmeno">Jméno</label>
+                            <input type="text" id="jmeno" name="jmeno" placeholder="Jméno" value="{{ jmeno or '' }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prijmeni">Příjmení</label>
+                            <input type="text" id="prijmeni" name="prijmeni" placeholder="Příjmení" value="{{ prijmeni or '' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="datum">Datum narození</label>
+                            <input type="date" id="datum" name="datum" value="{{ datum or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="email" value="{{ email or '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group"> 
+                            <label for="stat-select">Vyberte Stát:</label>
+                            <select name="stat" id="stat-select">
+                                <option value="Česká republika">Česká republika</option>
+                                <option value="Slovenská republika">Slovenská republika</option>
+                                <option value="Stát EU">Stát EU</option>
+                                <option value="Stát mimo EU">Stát mimo EU</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <fieldset class="radio-group"> 
+                                <legend>Pohlaví</legend>
+                                <label><input type="radio" name="pohlavi" value="muz"> muž</label>
+                                <label><input type="radio" name="pohlavi" value="zena"> žena</label>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <label for="zprava">Zde napiště co vám leží na srdci</label>
+                    <textarea name="zprava" id="zprava" cols="50" rows="10" required>{{ zprava or '' }}</textarea>
+                </div>
+                
+                <div class="form-section submit-section">
+                    <button class="button" type="submit">
+                        <span class="pr_pismeno">P</span>oslat
+                    </button>
+                </div>
+            </form>
+            <p>Zde jsou kontakty na nás:</p>
+            <hr>
+            <a class= "button back" href="{{ url_for('uvod') }}"><span class="pr_pismeno">Z</span>pět na úvodní stránku</a>
+            <hr>
+        </div>
+    </main>
+    <footer>
+        <p>Mrtvola Design
+        <br>Na zelené louce 1A
+        <br>111 11  Někde
+        <br>
+        </p>
+    </footer>
+</body>
+</html>
