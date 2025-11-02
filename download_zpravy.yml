@@ -1,0 +1,14 @@
+---
+- name: Stahnout soubor zpravy.json z ciloveho serveru
+  hosts: ansible-target
+  become: false # Bezi pod vasim uzivatelem (vagrant)
+  tasks:
+    - name: Stazeni zpravy.json
+      ansible.builtin.fetch:
+        # Cesta k souboru na vzdáleném stroji
+        src: /opt/static-sites/flask-web/zpravy.json
+        # Adresář, kam se soubor uloží na lokálním počítači
+        dest: ./downloaded_files/
+        # Vytvoří adresářovou strukturu: ./downloaded_files/ansible-target/opt/static-sites/flask-web/zpravy.json
+        flat: true 
+        # Zjednoduší cestu tak, že soubor se uloží jako: ./downloaded_files/zpravy.json

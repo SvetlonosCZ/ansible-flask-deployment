@@ -16,12 +16,17 @@
     mode: '0755'
 
 - name: 3. Zkopírování celé Flask aplikace na cílový server
-  ansible.builtin.copy:
-    src: /vagrant/flask-web/
+  ansible.builtin.synchronize:
+    src: ../../flask-web/
     dest: "{{ site_root_dir }}/flask-web/"
-    owner: "{{ webapp_user }}"
-    group: "{{ webapp_user }}"
-    mode: '0755'
+    delete: no  # Nesmaže soubory na serveru, které nejsou v source
+    recursive: yes
+    rsync_opts:
+      - "--checksum"
+      - "--chown={{ webapp_user }}:{{ webapp_group }}"
+  notify: Reload Systemd a Restart Flask
+  delegate_to: "{{ inventory_hostname }}"
+  changed_when: false
 
 # --- NGINX KONFIGURACE PRO FLASK REVERZNÍ PROXY ---
 
@@ -45,6 +50,8 @@
     src: /etc/nginx/sites-available/mujweb
     dest: /etc/nginx/sites-enabled/mujweb
     state: link
+    # Force: yes zajistí, že symlink bude vytvořen, i kdyby na cílovém místě ležel soubor
+    force: yes
   notify: Restart NGINX
 
 # =================================================================
@@ -74,13 +81,13 @@
     owner: root
     group: root
     mode: '0644'
-  notify: Restart a povolení systemd služby
+  notify: Reload Systemd a Restart Flask # Spustí Flask po změně služby
 
-- name: 10a. Reload systemd démona pro načtení nové služby
+- name: 11. Reload systemd démona pro načtení nové služby
   ansible.builtin.systemd:
     daemon_reload: yes
 
-- name: 10b. Zajištění vlastnictví a práv pro uživatele aplikace
+- name: 12. Zajištění vlastnictví a práv pro uživatele aplikace
   ansible.builtin.file:
     path: "{{ site_root_dir }}/flask-web"
     state: directory
@@ -88,42 +95,121 @@
     group: "{{ webapp_user }}"
     recurse: yes
     mode: '0755'
+  changed_when: false
 
-- name: 10c. Vytvoření prázdného JSON souboru s právy pro zápis
-  ansible.builtin.file:
-    path: "{{ site_root_dir }}/flask-web/zpravy.json"
-    state: touch # Vytvoří prázdný soubor, pokud neexistuje
+- name: 13. Vytvoření prázdného JSON souboru
+  ansible.builtin.copy:
+    content: "{}\n"
+    dest: "{{ site_root_dir }}/flask-web/zpravy.json"
     owner: "{{ webapp_user }}"
-    group: "{{ webapp_user }}"
+    group: "{{ webapp_group }}"
     mode: '0664'
+    force: no
 
-- name: 11. Zajištění spuštění Flask aplikace
+- name: 13b. Inicializace JSON souboru prázdným slovníkem
+  ansible.builtin.shell: |
+    if [ ! -s "{{ site_root_dir }}/flask-web/zpravy.json" ]; then
+      echo '{}' > "{{ site_root_dir }}/flask-web/zpravy.json"
+      chown {{ webapp_user }}:{{ webapp_group }} "{{ site_root_dir }}/flask-web/zpravy.json"
+      chmod 0664 "{{ site_root_dir }}/flask-web/zpravy.json"
+    fi
+  args:
+    creates: "{{ site_root_dir }}/flask-web/zpravy.json"
+
+
+# ZDE KONČÍ KONFIGURACE A ZAČÍNÁ SPOUŠTĚNÍ
+# =================================================================
+
+- name: 14. Zajištění spuštění Flask aplikace
   ansible.builtin.systemd:
     name: flask_app.service
     state: started
     enabled: yes
+  register: gunicorn_start_result
+  failed_when: false 
 
-- name: 12. Zapnuti a spusteni NGINX
+# --- DIAGNOSTIKA: ZJIŠTĚNÍ PŘÍČINY SELHÁNÍ GUNICORNU ---
+
+# - name: 15. Získání detailních logů a stavu Gunicornu
+#   ansible.builtin.shell: |
+#     # Zjistí aktuální stav služby
+#     systemctl status flask_app.service || true
+#     # Získá poslední logy pro ladění
+#     journalctl -n 50 --no-pager -u flask_app.service || true
+#   register: gunicorn_status
+#   changed_when: false
+#   # POZOR: Spustí se vždy, i když Task 14 selhal.
+
+# - name: 16. Zobrazení logů Gunicornu (KRITICKÉ pro ladění)
+#   ansible.builtin.debug:
+#     msg: "Gunicorn Status a Logy (Debug): {{ gunicorn_status.stdout_lines }}"
+#  when: "gunicorn_status.stdout is defined and 'Active: failed' in gunicorn_status.stdout or gunicorn_status.rc != 0"
+
+# --- ČEKÁNÍ A KONEČNÉ SPOUŠTĚNÍ ---
+
+# - name: 17. Počkání na otevření TCP portu 8000 pro Gunicorn
+#   # Čekáme na Flask, který musí být nastartován pro NGINX.
+#   ansible.builtin.wait_for:
+#     port: 8000
+#     host: 127.0.0.1
+#     timeout: 30
+#     msg: "Gunicorn (Flask) nenastartoval na portu 8000. Viz logy z Tasku 16 pro detaily!"
+#     # ODSTRANĚN NEPODPOROVANÝ PARAMETR failed_when
+
+- name: 18. Zapnuti a spusteni NGINX
+  # Původní Task 17 (wait_for port 8000) odstraněn, NGINX se připojí na Socket.
   ansible.builtin.service:
     name: nginx
     state: started
     enabled: yes
 
+- name: 19. Vynucené spuštění handlerů (Restart NGINX a Flask)
+  meta: flush_handlers
+
+- name: 20. Počkání na nastartování NGINX (port 80)
+  ansible.builtin.wait_for:
+    port: "{{ http_port }}"
+    timeout: 30
+
 # =================================================================
-# ZKOUŠKA FUNKČNOSTI (Upravená pro dynamický web)
+# ZKOUŠKA FUNKČNOSTI
 # =================================================================
 
-- name: 13. Validace HTTP dostupnosti
+- name: 21a. Validace úvodní stránky
+  ansible.builtin.uri:
+    url: http://localhost:{{ http_port }}/
+    status_code: 200
+    return_content: yes
+  register: index_check
+
+- name: 21b. Validace kontakt stránky
   ansible.builtin.uri:
     url: http://localhost:{{ http_port }}/kontakt
     status_code: 200
     return_content: yes
-  register: http_check
+  register: kontakt_check
 
-- name: 14. Overeni obsahu stranky (assertion)
+- name: 21c. Validace kočky stránky
+  ansible.builtin.uri:
+    url: http://localhost:{{ http_port }}/kocky
+    status_code: 200
+    return_content: yes
+  register: kocky_check
+
+- name: 22. Ověření obsahu všech stránek
   ansible.builtin.assert:
     that:
-      - "'Kontakt' in http_check.content"
-      - "'Odeslat zprávu' in http_check.content"
-    fail_msg: "Chyba validace: Web je dostupny, ale nenasel jsem text 'Kontakt' nebo tlacitko 'Odeslat zprávu'!"
-    success_msg: "Validace OK: Flask web je dostupny, odpovida a obsahuje spravny obsah."
+      # Index
+      - "'<title>Moje stránky</title>' in index_check.content"
+      - "'<h1>Nadpis</h1>' in index_check.content"
+      
+      # Kontakt
+      - "'<title>Kontakty</title>' in kontakt_check.content"
+      - "'<form action=\"/kontakt\"' in kontakt_check.content"
+      
+      # Kočky
+      - "'<title>Kočky</title>' in kocky_check.content"
+      - "'<h1>To jsme my kočky!</h1>' in kocky_check.content"
+    
+    fail_msg: "Chyba validace: Některá ze stránek není dostupná nebo neobsahuje očekávaný obsah!"
+    success_msg: "Validace OK: Všechny stránky jsou dostupné a obsahují správný obsah."

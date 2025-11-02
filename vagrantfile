@@ -17,7 +17,7 @@ Vagrant.configure("2") do |config|
   # --- Síťování ---
   # Forward port 80 (NGINX)
   # Poznámka: Port 80 na hostiteli (Windows) může vyžadovat oprávnění správce při spuštění.
-  config.vm.network "forwarded_port", guest: 80, host: 80 
+  config.vm.network "forwarded_port", guest: 80, host: 8080
   # Privátní síť
   config.vm.network "private_network", ip: "192.168.56.10"
 
@@ -57,7 +57,6 @@ Vagrant.configure("2") do |config|
     # OPRAVA PRO CESTU K ROLÍM: Vagrant použije tento konfigurační soubor, který explicitně definuje roles_path.
     ansible.config_file = "ansible-project/ansible.cfg"
 
-    # Opravený komentář:
     # Vagrant použije .vault_pass k automatickému odemčení 'group_vars/vault.yml'
   end
 end

@@ -6,6 +6,28 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styly.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='kontakt.css') }}">
     <title>Kontakty</title>
+    <!-- Jednoduché CSS pro debug sekci -->
+    <style>
+        .message.success {
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border: 1px solid #4CAF50; 
+            background-color: #e6ffe6; 
+            color: #4CAF50; 
+            border-radius: 5px;
+        }
+        .message.error {
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border: 1px solid #cc0000; 
+            background-color: #ffe6e6; 
+            color: #cc0000; 
+            border-radius: 5px;
+        }
+        #debug-data h2 {
+            margin-top: 50px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -28,13 +50,13 @@
             <br>
             
             {% if success_message %}
-                <div style="padding: 15px; margin-bottom: 20px; border: 1px solid #4CAF50; background-color: #e6ffe6; color: #4CAF50; border-radius: 5px;">
+                <div class="message success">
                     Děkujeme! Vaše zpráva byla úspěšně odeslána.
                 </div>
             {% endif %}
 
             {% if error_message %}
-                <div style="padding: 15px; margin-bottom: 20px; border: 1px solid #cc0000; background-color: #ffe6e6; color: #cc0000; border-radius: 5px;">
+                <div class="message error">
                     {{ error_message }}
                 </div>
             {% endif %}
@@ -46,22 +68,26 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="jmeno">Jméno</label>
-                            <input type="text" id="jmeno" name="jmeno" placeholder="Jméno" value="{{ jmeno or '' }}" required>
+                            <!-- POUŽÍVÁME FORM_DATA.JMENO -->
+                            <input type="text" id="jmeno" name="jmeno" placeholder="Jméno" value="{{ form_data.jmeno }}" required>
                         </div>
                         <div class="form-group">
                             <label for="prijmeni">Příjmení</label>
-                            <input type="text" id="prijmeni" name="prijmeni" placeholder="Příjmení" value="{{ prijmeni or '' }}" required>
+                            <!-- POUŽÍVÁME FORM_DATA.PRIJMENI -->
+                            <input type="text" id="prijmeni" name="prijmeni" placeholder="Příjmení" value="{{ form_data.prijmeni }}" required>
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="datum">Datum narození</label>
-                            <input type="date" id="datum" name="datum" value="{{ datum or '' }}">
+                            <!-- POUŽÍVÁME FORM_DATA.DATUM -->
+                            <input type="date" id="datum" name="datum" placeholder="RRRR-MM-DD" value="{{ form_data.datum }}">
                         </div>
                         <div class="form-group">
                             <label for="email">Email</label>
-                            <input type="email" id="email" name="email" placeholder="email" value="{{ email or '' }}" required>
+                            <!-- POUŽÍVÁME FORM_DATA.EMAIL -->
+                            <input type="email" id="email" name="email" placeholder="email" value="{{ form_data.email }}">
                         </div>
                     </div>
 
@@ -69,17 +95,19 @@
                         <div class="form-group"> 
                             <label for="stat-select">Vyberte Stát:</label>
                             <select name="stat" id="stat-select">
-                                <option value="Česká republika">Česká republika</option>
-                                <option value="Slovenská republika">Slovenská republika</option>
-                                <option value="Stát EU">Stát EU</option>
-                                <option value="Stát mimo EU">Stát mimo EU</option>
+                                <!-- POUŽÍVÁME FORM_DATA.STAT -->
+                                <option value="Česká republika" {% if form_data.stat == 'Česká republika' %}selected{% endif %}>Česká republika</option>
+                                <option value="Slovenská republika" {% if form_data.stat == 'Slovenská republika' %}selected{% endif %}>Slovenská republika</option>
+                                <option value="Stát EU" {% if form_data.stat == 'Stát EU' %}selected{% endif %}>Stát EU</option>
+                                <option value="Stát mimo EU" {% if form_data.stat == 'Stát mimo EU' %}selected{% endif %}>Stát mimo EU</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <fieldset class="radio-group"> 
                                 <legend>Pohlaví</legend>
-                                <label><input type="radio" name="pohlavi" value="muz"> muž</label>
-                                <label><input type="radio" name="pohlavi" value="zena"> žena</label>
+                                <!-- POUŽÍVÁME FORM_DATA.POHLAVI -->
+                                <label><input type="radio" name="pohlavi" value="muz" {% if form_data.pohlavi == 'muz' %}checked{% endif %}> muž</label>
+                                <label><input type="radio" name="pohlavi" value="zena" {% if form_data.pohlavi == 'zena' %}checked{% endif %}> žena</label>
                             </fieldset>
                         </div>
                     </div>
@@ -87,7 +115,8 @@
 
                 <div class="form-section">
                     <label for="zprava">Zde napiště co vám leží na srdci</label>
-                    <textarea name="zprava" id="zprava" cols="50" rows="10" required>{{ zprava or '' }}</textarea>
+                    <!-- POUŽÍVÁME FORM_DATA.ZPRAVA -->
+                    <textarea name="zprava" id="zprava" cols="50" rows="10" required>{{ form_data.zprava }}</textarea>
                 </div>
                 
                 <div class="form-section submit-section">
@@ -100,12 +129,49 @@
             <hr>
             <a class= "button back" href="{{ url_for('uvod') }}"><span class="pr_pismeno">Z</span>pět na úvodní stránku</a>
             <hr>
+            
+            <!-- DEBUG SEKCIE PRO ZOBRAZENÍ AKTUÁLNÍHO OBSAHU ZPRÁV -->
+            <section id="debug-data">
+                <h2>Aktuální stav uložených zpráv (Debug)</h2>
+                <p class="required-note" style="color: red;">Tato sekce se používá pouze pro ověření, že data fungují. V produkci by se nezobrazovala.</p>
+                
+                {% if zpravy_data %}
+                    {% for jmeno_prijmeni, zpravy_list in zpravy_data.items() %}
+                        <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                            <h3>Zprávy od: {{ jmeno_prijmeni }}</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                <thead style="background-color: #f4f4f4;">
+                                    <tr>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Odesláno</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">E-mail</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Stát/Pohlaví</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Zpráva</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for zprava in zpravy_list %}
+                                        <tr>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">{{ zprava.odeslano }}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">{{ zprava.email }}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">{{ zprava.stat }} / {{ zprava.pohlavi }}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">{{ zprava.text[:50] }}...</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>Soubor `zpravy.json` je buď prázdný, nebo se nepodařilo načíst žádná data (Očekává se: `{}`).</p>
+                {% endif %}
+
+            </section>
         </div>
     </main>
     <footer>
         <p>Mrtvola Design
         <br>Na zelené louce 1A
-        <br>111 11  Někde
+        <br>111 11  Někde
         <br>
         </p>
     </footer>

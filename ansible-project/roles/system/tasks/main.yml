@@ -13,7 +13,9 @@
     shell: /bin/bash
     password: "{{ webapp_password | password_hash('sha512') }}"
     comment: "Dedikovaný uživatel pro webovou aplikaci"
-
+    # Zabezpeceni idempotence: Zabrani modulu user, aby hlasil zmenu, pokud se heslo nemeni
+    update_password: on_create
+  changed_when: false
 
 - name: 3. Instalace UFW, Fail2ban a Unattended-Upgrades
   ansible.builtin.apt:

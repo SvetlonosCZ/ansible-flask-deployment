@@ -17,11 +17,11 @@ Projekt demonstruje práci s:
 📁 Struktura projektu
 
 muj-flask-web/
-├── app.py             # Hlavní serverová aplikace Flask
-├── requirements.txt   # Závislosti (Flask)
-├── README.md          # Tento soubor
-├── templates/         # HTML šablony (index, kontakt, kocky)
-└── static/            # CSS, obrázky a další statické zdroje
+├── app.py             # Hlavní serverová aplikace Flask
+├── requirements.txt   # Závislosti (Flask)
+├── README.md          # Tento soubor
+├── templates/         # HTML šablony (index, kontakt, kocky)
+└── static/            # CSS, obrázky a další statické zdroje
 
 
 🚀 Jak spustit
@@ -35,6 +35,7 @@ cd muj-flask-web
 
 
 Instalace závislostí:
+
 Projekt vyžaduje pouze Flask. Je silně doporučeno použít virtuální prostředí.
 
 # Vytvoření virtuálního prostředí
@@ -44,7 +45,7 @@ source venv/bin/activate
 # Aktivace prostředí (Windows)
 venv\Scripts\activate
 # Instalace Flasku
-pip install -r requirements.txt 
+pip install -r requirements.txt
 
 
 Spuštění serveru:
@@ -53,9 +54,11 @@ python app.py
 
 
 Otevření v prohlížeči:
+
 Přejděte na adresu: http://127.0.0.1:5000/
 
 Zastavení serveru:
+
 V terminálu stiskněte Ctrl + C.
 
 🛠️ Detaily Backendu

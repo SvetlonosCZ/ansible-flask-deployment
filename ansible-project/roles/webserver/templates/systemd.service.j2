@@ -1,13 +1,25 @@
 [Unit]
-Description=Gunicorn instance for Flask web
+Description=Gunicorn instance pro Flask web
 After=network.target
 
 [Service]
-User={{ webapp_user }}
-Group={{ webapp_user }}
+User=webappi
+Group=webappi
 WorkingDirectory={{ site_root_dir }}/flask-web
-# --- UPRAVENO: Absolutní cesta k binárce gunicorn z .venv pro spolehlivost ---
-ExecStart={{ site_root_dir }}/flask-web/.venv/bin/gunicorn -w 3 -b unix:/tmp/gunicorn_flask_app.sock 'app:app' 
+Environment="PATH={{ site_root_dir }}/flask-web/.venv/bin"
+
+# --- ZMĚNY PRO ŘEŠENÍ CHYBY 502/PERMISSION DENIED ---
+# 1. Systemd vytvoří adresář /run/gunicorn
+RuntimeDirectory=gunicorn
+# 2. Nastaví skupinu adresáře /run/gunicorn na www-data (uživatel NGINX)
+RuntimeDirectoryGroup=www-data
+# 3. Nastaví práva 0775
+RuntimeDirectoryMode=0775
+
+# Gunicorn se váže na Unix socket v nově vytvořeném sdíleném adresáři /run/gunicorn
+ExecStart={{ site_root_dir }}/flask-web/.venv/bin/gunicorn --workers 3 --bind unix:/run/gunicorn/gunicorn.sock app:app
+# -----------------------------------------------------
+
 Restart=always
 
 [Install]

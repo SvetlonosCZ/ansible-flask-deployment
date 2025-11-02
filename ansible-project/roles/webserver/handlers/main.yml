@@ -1,12 +1,16 @@
 ---
-- name: Restart NGINX
+# Tento handler se volá pri zmene Flask kodu (Task 3) nebo systemd sablony (Task 10)
+# Je KRITICKÝ pro zajisteni, ze se nova Flask aplikace nacte.
+- name: Reload Systemd a Restart Flask
   ansible.builtin.systemd:
-    name: nginx
-    state: reloaded
-
-- name: Restart a povolení systemd služby
-  ansible.builtin.systemd:
+    # 1. Nejprve nacteme zmeny v systemd konfiguraci (pokud se zmenila sablona)
+    daemon_reload: true
+    # 2. Restartujeme Flask aplikaci
     name: flask_app.service
-    daemon_reload: yes  # Zajistí, že se systém načte novou systemd konfiguraci
     state: restarted
-    enabled: yes
+
+# Tento handler se volá pri zmene NGINX konfigurace
+- name: Restart NGINX
+  ansible.builtin.service:
+    name: nginx
+    state: restarted

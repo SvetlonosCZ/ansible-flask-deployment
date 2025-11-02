@@ -1,20 +1,39 @@
 server {
-    listen 80;
-    server_name {{ ansible_fqdn }};
+    # 1. Naslouchání na portu 80 (HTTP)
+    listen {{ http_port | default(80) }};
+    # Pouzijte IP adresu nebo _ (wildcard) pro zachyceni vsech domen, pokud neni explicitne definovano
+    server_name _; 
 
+    # Umozni NGINX logovat i chyby pri proxy (uzitecne pro ladeni 502 Bad Gateway)
+    error_log /var/log/nginx/flask_error.log warn;
+    access_log /var/log/nginx/flask_access.log combined;
+
+    # 2. Blok pro statické soubory
+    # Pokud URL zacina /static (napr. /static/styly.css), obslouzi to NGINX primo
     location /static {
-        # Zde NGINX servíruje statiku přímo
+        # Cesta k vasim CSS/JS/obrazkum na serveru.
         alias {{ site_root_dir }}/flask-web/static;
+        # Dulezite: zabrani Flasku zbytecne zpracovavat pozadavky na statiku
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
     }
 
+    # 3. Blok pro dynamickou aplikaci
+    # Vsechny ostatni pozadavky (napr. / nebo /kontakt) preposila na Gunicorn
     location / {
-        # --- ZMĚNA: Používáme explicitní hlavičky, protože 'proxy_params' nemusí existovat ---
+        # *** OPRAVA: POUŽITÍ UNIX SOCKETU MÍSTO TCP PORTU ***
+        # Toto musí odpovídat cestě nastavené v systemd službě Gunicornu.
+        proxy_pass http://unix:/run/gunicorn/gunicorn.sock; 
+
+        # Nastaveni hlavicek pro spravne predani informaci o klientovi
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         
-        # TOTO JE KRITICKÉ: Cesta musí odpovídat systemd.service.j2
-        proxy_pass http://unix:/tmp/gunicorn_flask_app.sock:; 
+        # Dalsi parametry pro proxy
+        proxy_redirect off;
+        proxy_buffering off;
+        proxy_read_timeout 90s; # Povolit delsi dobu cteni
     }
 }
